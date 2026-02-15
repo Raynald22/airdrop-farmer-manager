@@ -1,8 +1,16 @@
-import { createPublicClient, http, formatEther } from "viem";
-import { mainnet, zksync, scroll, base, linea, arbitrum, optimism } from "viem/chains";
+import { createPublicClient, http, formatEther, type PublicClient, type Chain } from "viem";
+import {
+    mainnet,
+    zksync,
+    scroll,
+    base,
+    linea,
+    arbitrum,
+    optimism,
+} from "viem/chains";
 
 // Map chain IDs to viem chains
-const CHAINS: Record<number, any> = {
+const CHAINS: Record<number, Chain> = {
     1: mainnet,
     324: zksync,
     534352: scroll,
@@ -18,7 +26,7 @@ export interface ChainStats {
 }
 
 export class ChainDataService {
-    private clients: Record<number, ReturnType<typeof createPublicClient>>;
+    private clients: Record<number, PublicClient>;
 
     constructor() {
         this.clients = {};
