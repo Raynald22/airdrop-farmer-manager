@@ -114,7 +114,60 @@ const chains = [
   { name: "Ethereum", icon: "⟠", color: "#627EEA" },
 ];
 
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+const prindIds = {
+  free: "",
+  pro: "price_1QWX...", // Replace with real Stripe Price ID
+  whale: "price_1QYZ..." // Replace with real Stripe Price ID
+};
+
 export default function LandingPage() {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (planName: string, priceId?: string) => {
+    if (!isLoaded) return;
+    
+    if (!user) {
+      router.push("/sign-up");
+      return;
+    }
+
+    if (planName.toLowerCase() === "free") {
+      router.push("/dashboard");
+      return;
+    }
+
+    if (!priceId) {
+      alert("Stripe Price ID not configured");
+      return;
+    }
+
+    setLoading(planName);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId }),
+      });
+      
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No URL returned");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Failed to start checkout");
+    } finally {
+      setLoading(null);
+    }
+  };
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Nav */}
@@ -273,8 +326,10 @@ export default function LandingPage() {
                         : "bg-muted/50 text-foreground hover:bg-muted"
                     )}
                     size="sm"
+                    disabled={loading === plan.name}
+                    onClick={() => handleCheckout(plan.name, plan.name === "Pro" ? "price_PRO_ID" : (plan.name === "Whale" ? "price_WHALE_ID" : undefined))}
                   >
-                    {plan.cta}
+                    {loading === plan.name ? "Processing..." : plan.cta}
                   </Button>
                   <ul className="space-y-2">
                     {plan.features.map((f) => (

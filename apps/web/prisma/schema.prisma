@@ -11,6 +11,13 @@ model User {
   id        String   @id // Clerk ID
   email     String   @unique
   tier      String   @default("free") // free, pro, whale
+  
+  // Stripe
+  stripeCustomerId String? @unique
+  subscriptionId   String? @unique
+  subscriptionStatus String? // active, past_due, canceled
+  currentPeriodEnd DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   wallets   Wallet[]
@@ -41,7 +48,7 @@ model WalletStat {
   balance   Float    @default(0)
   fetchedAt DateTime @default(now())
 
-  @@index([walletId, chainId])
+  @@unique([walletId, chainId])
 }
 
 model Alert {

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBalance } from "wagmi";
 import { formatEther } from "viem";
 import { zkSync, scroll, base, linea } from "wagmi/chains";
-import { Trash2, ExternalLink, Copy } from "lucide-react";
+import { Trash2, ExternalLink, Copy, RefreshCw } from "lucide-react";
 import { calculateScore, getStatusColor, getStatusEmoji, type WalletScore } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +24,8 @@ interface TrackedWallet {
 interface WalletTableProps {
   wallets: TrackedWallet[];
   onRemoveWallet: (id: string) => void;
+  onRefreshWallet: (id: string) => void;
+  isRefreshing?: boolean;
 }
 
 function ChainBalance({ address, chainId, symbol }: { address: `0x${string}`; chainId: number; symbol: string }) {
@@ -49,7 +51,12 @@ function ScoreBadge({ score }: { score: WalletScore }) {
   );
 }
 
-function WalletRow({ wallet, onRemove }: { wallet: TrackedWallet; onRemove: (id: string) => void }) {
+function WalletRow({ wallet, onRemove, onRefresh, isRefreshing }: { 
+  wallet: TrackedWallet; 
+  onRemove: (id: string) => void;
+  onRefresh: (id: string) => void;
+  isRefreshing?: boolean;
+}) {
   const addr = wallet.address as `0x${string}`;
 
   // Mock scoring for demo — in production this comes from backend
@@ -101,6 +108,13 @@ function WalletRow({ wallet, onRemove }: { wallet: TrackedWallet; onRemove: (id:
       {/* Actions */}
       <TableCell>
         <div className="flex items-center gap-1 justify-end">
+           <button
+            onClick={() => onRefresh(wallet.id)}
+            className="p-1.5 rounded-md hover:bg-accent/50 transition-colors"
+            title="Refresh Data"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground hover:text-primary", isRefreshing && "animate-spin")} />
+          </button>
           <a
             href={`https://debank.com/profile/${wallet.address}`}
             target="_blank"
@@ -121,7 +135,7 @@ function WalletRow({ wallet, onRemove }: { wallet: TrackedWallet; onRemove: (id:
   );
 }
 
-export function WalletTable({ wallets, onRemoveWallet }: WalletTableProps) {
+export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefreshing }: WalletTableProps) {
   if (wallets.length === 0) {
     return (
       <Card className="glass border-dashed border-border/50">
@@ -164,7 +178,13 @@ export function WalletTable({ wallets, onRemoveWallet }: WalletTableProps) {
             </TableHeader>
             <TableBody>
               {wallets.map((wallet) => (
-                <WalletRow key={wallet.id} wallet={wallet} onRemove={onRemoveWallet} />
+                <WalletRow 
+                  key={wallet.id} 
+                  wallet={wallet} 
+                  onRemove={onRemoveWallet} 
+                  onRefresh={onRefreshWallet}
+                  isRefreshing={isRefreshing}
+                />
               ))}
             </TableBody>
           </Table>

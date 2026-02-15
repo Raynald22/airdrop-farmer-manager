@@ -9,7 +9,7 @@ import { useWallets } from "@/hooks/use-wallets";
 const FREE_TIER_MAX = 5;
 
 export default function DashboardPage() {
-  const { wallets, isLoading, addWallet, deleteWallet } = useWallets();
+  const { wallets, isLoading, addWallet, deleteWallet, refreshWallet, isRefreshing } = useWallets();
 
   const handleAddWallets = (newEntries: { address: string; label?: string }[]) => {
     // In a real app we'd batch this, but for now loop
@@ -62,7 +62,12 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Wallet Table — takes 2 cols */}
         <div className="lg:col-span-2">
-          <WalletTable wallets={wallets} onRemoveWallet={handleRemoveWallet} />
+          <WalletTable 
+            wallets={wallets} 
+            onRemoveWallet={handleRemoveWallet} 
+            onRefreshWallet={refreshWallet}
+            isRefreshing={isRefreshing}
+          />
         </div>
 
         {/* Chart — takes 1 col */}

@@ -44,13 +44,26 @@ export function useWallets() {
         },
     });
 
+    const refreshMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`/api/wallets/${id}/refresh`, { method: "POST" });
+            if (!res.ok) throw new Error("Failed to refresh wallet");
+            return res.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["wallets"] });
+        },
+    });
+
     return {
         wallets,
         isLoading,
         error,
         addWallet: addMutation.mutate,
         deleteWallet: deleteMutation.mutate,
+        refreshWallet: refreshMutation.mutate,
         isAdding: addMutation.isPending,
         isDeleting: deleteMutation.isPending,
+        isRefreshing: refreshMutation.isPending,
     };
 }
