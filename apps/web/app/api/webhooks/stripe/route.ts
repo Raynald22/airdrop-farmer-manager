@@ -41,7 +41,9 @@ export async function POST(req: Request) {
                     stripeCustomerId: subscription.customer as string,
                     subscriptionId: subscription.id,
                     subscriptionStatus: subscription.status,
-                    currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                    currentPeriodEnd: new Date(
+                        (subscription as any).current_period_end * 1000
+                    ),
                     tier: "pro", // Simplified: needs logic for free/pro based on priceId
                 },
             });
@@ -57,7 +59,9 @@ export async function POST(req: Request) {
                     stripeCustomerId: subscription.customer as string,
                 },
                 data: {
-                    currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+                    currentPeriodEnd: new Date(
+                        (subscription as any).current_period_end * 1000
+                    ),
                     subscriptionStatus: subscription.status,
                 },
             });
