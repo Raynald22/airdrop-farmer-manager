@@ -3,6 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import prisma from "@/lib/db";
 import { chainDataService } from "@/lib/chain-data";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
