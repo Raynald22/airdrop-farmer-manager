@@ -6,6 +6,7 @@ import {
   Settings,
   Shield,
   TrendingUp,
+  Gift,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
@@ -20,6 +21,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Airdrops", href: "/airdrops", icon: Gift },
   { label: "Wallets", href: "/wallets", icon: Wallet },
   { label: "Activity", href: "/activity", icon: Activity },
   { label: "Scoring", href: "/scoring", icon: TrendingUp },

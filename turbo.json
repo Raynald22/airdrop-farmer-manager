@@ -7,7 +7,8 @@
     "PRISMA_DATABASE_URL",
     "POSTGRES_URL",
     "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET"
+    "STRIPE_WEBHOOK_SECRET",
+    "NODE_ENV"
   ],
   "tasks": {
     "build": {

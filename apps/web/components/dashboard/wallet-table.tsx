@@ -12,6 +12,7 @@ import { zkSync, scroll, base, linea } from "wagmi/chains";
 import { Trash2, ExternalLink, Copy, RefreshCw } from "lucide-react";
 import { calculateScore, getStatusColor, getStatusEmoji, type WalletScore } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
+import { ChainIcon } from "@/components/ui/chain-icon";
 
 interface TrackedWallet {
   id: string;
@@ -169,10 +170,18 @@ export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefres
               <TableRow className="hover:bg-transparent border-border/30">
                 <TableHead className="text-xs w-[200px]">Wallet</TableHead>
                 <TableHead className="text-xs">Score</TableHead>
-                <TableHead className="text-xs">◆ zkSync</TableHead>
-                <TableHead className="text-xs">📜 Scroll</TableHead>
-                <TableHead className="text-xs">🔵 Base</TableHead>
-                <TableHead className="text-xs">▬ Linea</TableHead>
+                <TableHead className="text-xs">
+                  <div className="flex items-center gap-1.5"><ChainIcon name="zksync" className="h-4 w-4" /> zkSync</div>
+                </TableHead>
+                <TableHead className="text-xs">
+                  <div className="flex items-center gap-1.5"><ChainIcon name="scroll" className="h-4 w-4" /> Scroll</div>
+                </TableHead>
+                <TableHead className="text-xs">
+                  <div className="flex items-center gap-1.5"><ChainIcon name="base" className="h-4 w-4" /> Base</div>
+                </TableHead>
+                <TableHead className="text-xs">
+                  <div className="flex items-center gap-1.5"><ChainIcon name="linea" className="h-4 w-4" /> Linea</div>
+                </TableHead>
                 <TableHead className="text-xs text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>

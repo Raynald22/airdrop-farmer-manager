@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { getStripeSession } from "@/lib/stripe";
-import prisma from "@/lib/db";
+import { prisma } from "@/lib/db";
 
 export async function POST(req: Request) {
     const user = await currentUser();

@@ -23,7 +23,7 @@ export interface SybilReport {
     warnings: SybilWarning[];
 }
 
-interface WalletActivity {
+export interface WalletActivity {
     address: string;
     txCount: number;
     uniqueContracts: number;

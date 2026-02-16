@@ -9,7 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isAddress } from "viem";
-import { Plus, Upload, X } from "lucide-react";
+import { Plus, Upload, X, Loader2 } from "lucide-react";
+
+// Basic regex for non-EVM chains
+const SOL_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const BTC_REGEX = /^(1|3|bc1)[a-zA-Z0-9]{25,59}$/;
 
 const formSchema = z.object({
   addresses: z.string().min(1, "Paste at least one address"),
@@ -17,7 +21,7 @@ const formSchema = z.object({
 });
 
 interface WalletInputProps {
-  onAddWallets: (wallets: { address: string; label?: string }[]) => void;
+  onAddWallets: (wallets: { address: string; label?: string; type: "EVM" | "SOL" | "BTC" }[]) => void;
   currentCount: number;
   maxCount: number;
 }
@@ -25,41 +29,73 @@ interface WalletInputProps {
 export function WalletInput({ onAddWallets, currentCount, maxCount }: WalletInputProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: { addresses: "", label: "" },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  function getWalletType(address: string): "EVM" | "SOL" | "BTC" | "UNKNOWN" {
+      if (isAddress(address)) return "EVM";
+      if (SOL_REGEX.test(address)) return "SOL";
+      if (BTC_REGEX.test(address)) return "BTC";
+      return "UNKNOWN";
+  }
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setError(null);
-    const rawLines = values.addresses.split(/[\n,]+/).map((a) => a.trim()).filter(Boolean);
-    const validAddresses = rawLines.filter((addr) => isAddress(addr));
-    const invalidCount = rawLines.length - validAddresses.length;
-    const remaining = maxCount - currentCount;
+    setIsSubmitting(true);
+    
+    try {
+        const rawLines = values.addresses.split(/[\n,]+/).map((a) => a.trim()).filter(Boolean);
+        
+        const validWallets: { address: string; type: "EVM" | "SOL" | "BTC" }[] = [];
+        let invalidCount = 0;
 
-    if (validAddresses.length === 0) {
-      setError("No valid EVM addresses found.");
-      return;
-    }
+        rawLines.forEach(addr => {
+            const type = getWalletType(addr);
+            if (type !== "UNKNOWN") {
+                validWallets.push({ address: addr, type });
+            } else {
+                invalidCount++;
+            }
+        });
 
-    if (validAddresses.length > remaining) {
-      setError(`Free tier limit: you can only add ${remaining} more wallet(s). Upgrade to Pro for unlimited.`);
-      return;
-    }
+        const remaining = maxCount - currentCount;
 
-    const walletsToAdd = validAddresses.map((addr) => ({
-      address: addr,
-      label: values.label || undefined,
-    }));
+        if (validWallets.length === 0) {
+            setError("No valid EVM, Solana, or Bitcoin addresses found.");
+            setIsSubmitting(false);
+            return;
+        }
 
-    onAddWallets(walletsToAdd);
-    form.reset();
-    setIsOpen(false);
+        if (validWallets.length > remaining) {
+            setError(`Free tier limit: you can only add ${remaining} more wallet(s). Upgrade to Pro for unlimited.`);
+            setIsSubmitting(false);
+            return;
+        }
 
-    if (invalidCount > 0) {
-      // Could use toast here
-      console.warn(`Skipped ${invalidCount} invalid addresses.`);
+        const walletsToAdd = validWallets.map((w) => ({
+            address: w.address,
+            type: w.type,
+            label: values.label || undefined,
+        }));
+
+        // Await the parent callback if it's async (it is in useWallets)
+        await onAddWallets(walletsToAdd);
+        
+        form.reset();
+        setIsOpen(false);
+
+        if (invalidCount > 0) {
+            console.warn(`Skipped ${invalidCount} invalid addresses.`);
+        }
+    } catch (e) {
+        console.error("Failed to add wallets", e);
+        setError("Failed to add wallets. Please try again.");
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -86,7 +122,7 @@ export function WalletInput({ onAddWallets, currentCount, maxCount }: WalletInpu
               Import Wallets
             </CardTitle>
             <CardDescription className="text-xs mt-1">
-              Paste EVM addresses (one per line or comma-separated)
+              Supports EVM (0x...), Solana, and Bitcoin addresses.
             </CardDescription>
           </div>
           <button onClick={() => setIsOpen(false)} className="p-1 rounded hover:bg-accent/50">
@@ -102,7 +138,7 @@ export function WalletInput({ onAddWallets, currentCount, maxCount }: WalletInpu
             {...form.register("label")}
           />
           <Textarea
-            placeholder={"0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\n0x503828976D22510aad0201ac7EC88293211D23Da"}
+            placeholder={"0xd8dA...\nHi7d...\nbc1q..."}
             className="min-h-[120px] font-mono text-xs bg-muted/30 border-border/50 resize-none"
             {...form.register("addresses")}
           />
@@ -119,9 +155,9 @@ export function WalletInput({ onAddWallets, currentCount, maxCount }: WalletInpu
               <Button type="button" variant="ghost" size="sm" onClick={() => setIsOpen(false)} className="text-xs h-8">
                 Cancel
               </Button>
-              <Button type="submit" size="sm" className="text-xs h-8 gap-1.5">
-                <Upload className="h-3 w-3" />
-                Import
+              <Button type="submit" size="sm" className="text-xs h-8 gap-1.5" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                {isSubmitting ? "Importing..." : "Import"}
               </Button>
             </div>
           </div>

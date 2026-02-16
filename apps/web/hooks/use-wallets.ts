@@ -7,7 +7,7 @@ async function fetchWallets(): Promise<Wallet[]> {
     return res.json();
 }
 
-async function addWallet(data: { address: string; label?: string }): Promise<Wallet> {
+async function addWallet(data: { address: string; label?: string; type?: "EVM" | "SOL" | "BTC" }): Promise<Wallet> {
     const res = await fetch("/api/wallets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,5 +65,7 @@ export function useWallets() {
         isAdding: addMutation.isPending,
         isDeleting: deleteMutation.isPending,
         isRefreshing: refreshMutation.isPending,
+        mutate: () => queryClient.invalidateQueries({ queryKey: ["wallets"] }),
+        isError: !!error,
     };
 }

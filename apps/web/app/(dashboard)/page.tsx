@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useEffect, useState } from "react";
 import { WalletInput } from "@/components/dashboard/wallet-input";
 import { WalletTable } from "@/components/dashboard/wallet-table";
 import { StatsCards } from "@/components/dashboard/stats-cards";
@@ -10,15 +12,42 @@ const FREE_TIER_MAX = 5;
 
 export default function DashboardPage() {
   const { wallets, isLoading, addWallet, deleteWallet, refreshWallet, isRefreshing } = useWallets();
+  const [sybilRiskCount, setSybilRiskCount] = useState(0);
 
-  const handleAddWallets = (newEntries: { address: string; label?: string }[]) => {
-    // In a real app we'd batch this, but for now loop
+  // Fetch Sybil stats
+  useEffect(() => {
+    async function fetchSybil() {
+        try {
+            // We could create a dedicated stats endpoint, but for now reuse analyze
+            // Optimization: In prod, make a lightweight "summary" endpoint
+            const res = await fetch("/api/sybil/analyze");
+            if (res.ok) {
+                const data = await res.json();
+                const atRisk = Object.values(data).filter(
+                    (r: any) => r.overallRisk !== "safe" && r.overallRisk !== "low"
+                ).length;
+                setSybilRiskCount(atRisk);
+            }
+        } catch (e) {
+            console.error("Failed to fetch sybil stats", e);
+        }
+    }
+    fetchSybil();
+  }, [wallets.length]); // Refresh when wallets change
+
+  const handleAddWallets = (newEntries: { address: string; label?: string; type: "EVM" | "SOL" | "BTC" }[]) => {
     newEntries.forEach(entry => addWallet(entry));
   };
 
   const handleRemoveWallet = (id: string) => {
     deleteWallet(id);
   };
+
+  // Calculate stats
+  const totalBalance = wallets.reduce((sum, w: any) => {
+      const walletBalance = w.stats?.reduce((s: number, stat: any) => s + (stat.balance || 0), 0) || 0;
+      return sum + walletBalance;
+  }, 0);
 
   if (isLoading) {
     return (
@@ -53,9 +82,9 @@ export default function DashboardPage() {
       {/* Stats */}
       <StatsCards
         totalWallets={wallets.length}
-        totalBalance="—"
-        activeWallets={wallets.length}
-        warningCount={wallets.length > 0 ? Math.floor(wallets.length * 0.3) : 0}
+        totalBalance={`${totalBalance.toFixed(4)} ETH`}
+        activeWallets={wallets.length} 
+        warningCount={sybilRiskCount}
       />
 
       {/* Content Grid */}

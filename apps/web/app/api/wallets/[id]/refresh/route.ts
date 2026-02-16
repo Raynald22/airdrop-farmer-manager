@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import prisma from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { chainDataService } from "@/lib/chain-data";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,10 @@ export async function POST(
         }
 
         // Fetch real data
-        const stats = await chainDataService.getAllStats(wallet.address);
+        const stats = await chainDataService.getAllStats(
+            wallet.address,
+            wallet.type as "EVM" | "SOL" | "BTC"
+        );
 
         // Update DB
         await Promise.all(

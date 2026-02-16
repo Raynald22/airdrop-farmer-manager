@@ -21,7 +21,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   wallets   Wallet[]
+  groups    WalletGroup[]
   alerts    Alert[]
+}
+
+enum WalletType {
+  EVM
+  SOL
+  BTC
 }
 
 model Wallet {
@@ -29,13 +36,31 @@ model Wallet {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   address   String
+  type      WalletType @default(EVM)
   label     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   stats     WalletStat[]
+  tasks     WalletTask[]
+  groups    WalletGroup[]
 
   @@unique([userId, address])
+}
+
+model WalletGroup {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  color     String?  // hex code or tailwind color name
+  
+  wallets   Wallet[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
 }
 
 model WalletStat {
@@ -61,4 +86,46 @@ model Alert {
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Airdrop {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique // e.g., "scroll-mainnet"
+  description String?
+  chain       String?  // e.g., "Scroll"
+  image       String?
+  status      String   @default("active") // active, snapshot_taken, ended
+  
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  airdropId   String
+  airdrop     Airdrop  @relation(fields: [airdropId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  points      Int      @default(0)
+  type        String   @default("manual") // manual, onchain_verify
+  
+  walletTasks WalletTask[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WalletTask {
+  id          String   @id @default(cuid())
+  walletId    String
+  wallet      Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  status      String   @default("pending") // pending, completed
+  completedAt DateTime?
+  proof       String?  // tx hash or signature
+
+  @@unique([walletId, taskId])
 }
