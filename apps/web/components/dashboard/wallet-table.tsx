@@ -10,14 +10,24 @@ import { useBalance } from "wagmi";
 import { formatEther } from "viem";
 import { zkSync, scroll, base, linea } from "wagmi/chains";
 import { Trash2, ExternalLink, Copy, RefreshCw } from "lucide-react";
-import { calculateScore, getStatusColor, getStatusEmoji, type WalletScore } from "@/lib/scoring";
+import { calculateWalletScore, getStatusColor, type WalletScore } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 import { ChainIcon } from "@/components/ui/chain-icon";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
+
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { StickyNote, Save } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface TrackedWallet {
   id: string;
   address: string;
   label?: string;
+  notes?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -28,6 +38,7 @@ interface WalletTableProps {
   onRefreshWallet: (id: string) => void;
   isRefreshing?: boolean;
 }
+
 
 function ChainBalance({ address, chainId, symbol }: { address: `0x${string}`; chainId: number; symbol: string }) {
   const { data, isLoading } = useBalance({ address, chainId });
@@ -46,31 +57,104 @@ function ChainBalance({ address, chainId, symbol }: { address: `0x${string}`; ch
 function ScoreBadge({ score }: { score: WalletScore }) {
   return (
     <div className={cn("inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold border", getStatusColor(score.status))}>
-      <span>{getStatusEmoji(score.status)}</span>
+      <span>{score.status === 'excellent' ? '🦄' : score.status === 'good' ? '🐋' : score.status === 'warning' ? '🐬' : '🐟'}</span>
       <span>{score.overall}</span>
     </div>
   );
 }
 
-function WalletRow({ wallet, onRemove, onRefresh, isRefreshing }: { 
+function WalletNotes({ wallet, onUpdate }: { wallet: TrackedWallet; onUpdate: () => void }) {
+  const [notes, setNotes] = useState(wallet.notes || "");
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch(`/api/wallets/${wallet.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+
+      if (!res.ok) throw new Error("Failed to save notes");
+
+      toast.success("Notes saved");
+      setIsOpen(false);
+      onUpdate();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to save");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <button className="group flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+          <StickyNote className={cn("h-3.5 w-3.5", wallet.notes ? "text-primary fill-primary/10" : "opacity-0 group-hover:opacity-100 transition-opacity")} />
+          <span className="text-xs max-w-[100px] truncate hidden sm:block">
+            {wallet.notes || <span className="opacity-0 group-hover:opacity-50 italic">Add note...</span>}
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80">
+        <div className="grid gap-4">
+          <div className="space-y-2">
+            <h4 className="font-medium leading-none">Wallet Notes</h4>
+            <p className="text-sm text-muted-foreground">
+              Add reminders or details for this wallet.
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Main burner, deployed on Scroll..."
+              className="h-24 resize-none"
+            />
+            <Button size="sm" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? "Saving..." : "Save Note"}
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function WalletRow({ wallet, onRemove, onRefresh, onUpdate, isRefreshing }: { 
   wallet: TrackedWallet; 
   onRemove: (id: string) => void;
   onRefresh: (id: string) => void;
+  onUpdate: (id: string) => void;
   isRefreshing?: boolean;
 }) {
   const addr = wallet.address as `0x${string}`;
 
-  // Mock scoring for demo — in production this comes from backend
-  const mockScore = calculateScore({
-    txCount: Math.floor(Math.random() * 80),
-    volumeUsd: Math.floor(Math.random() * 8000),
-    uniqueContracts: Math.floor(Math.random() * 30),
-    activeMonths: Math.floor(Math.random() * 6),
-    bridgeVolumeUsd: Math.floor(Math.random() * 4000),
-  });
+  // Mock scoring for demo
+  const mockStats = {
+    id: "mock",
+    walletId: wallet.id,
+    chainId: 1,
+    txCount: Math.floor(Math.random() * 100),
+    volumeUsd: Math.floor(Math.random() * 10000),
+    balance: Math.random() * 2,
+    fetchedAt: new Date()
+  };
+
+  // We cast to any because we are mocking the input
+  const mockScore = calculateWalletScore({ 
+      ...wallet, 
+      stats: [mockStats] 
+  } as any);
 
   const copyAddress = () => {
     navigator.clipboard.writeText(wallet.address);
+    toast.success("Address copied");
   };
 
   return (
@@ -93,6 +177,11 @@ function WalletRow({ wallet, onRemove, onRefresh, isRefreshing }: {
             <span className="text-[10px] text-muted-foreground">{wallet.label || "Unlabeled"}</span>
           </div>
         </div>
+      </TableCell>
+      
+      {/* Notes (New Column) */}
+      <TableCell>
+        <WalletNotes wallet={wallet} onUpdate={() => onUpdate(wallet.id)} />
       </TableCell>
 
       {/* Score */}
@@ -137,6 +226,18 @@ function WalletRow({ wallet, onRemove, onRefresh, isRefreshing }: {
 }
 
 export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefreshing }: WalletTableProps) {
+  // Simple hack to refresh: In a real app, use SWR/Tanstack Query mutation
+  // Here we just rely on parent re-fetching or optimistic updates. 
+  // For now, we pass a dummy update handler that refreshes the whole list via parent if possible,
+  // or just assumes optimistic update at row level (though refreshing is better).
+  // Actually, let's just use the refreshWallet function to trigger a re-fetch of that specific wallet if possible,
+  // or we need a way to tell parent to reload.
+  // For MVP, we'll reuse onRefreshWallet which triggers useWallets refresh logic.
+  
+  const handleUpdate = (id: string) => {
+      onRefreshWallet(id); 
+  };
+
   if (wallets.length === 0) {
     return (
       <Card className="glass border-dashed border-border/50">
@@ -169,7 +270,15 @@ export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefres
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/30">
                 <TableHead className="text-xs w-[200px]">Wallet</TableHead>
-                <TableHead className="text-xs">Score</TableHead>
+                <TableHead className="text-xs w-[150px]">Notes</TableHead>
+                <TableHead className="text-xs">
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center gap-1 cursor-help">
+                      Score <Info className="h-3 w-3" />
+                    </TooltipTrigger>
+                    <TooltipContent>Sybil risk score (Lower is better)</TooltipContent>
+                  </Tooltip>
+                </TableHead>
                 <TableHead className="text-xs">
                   <div className="flex items-center gap-1.5"><ChainIcon name="zksync" className="h-4 w-4" /> zkSync</div>
                 </TableHead>
@@ -192,6 +301,7 @@ export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefres
                   wallet={wallet} 
                   onRemove={onRemoveWallet} 
                   onRefresh={onRefreshWallet}
+                  onUpdate={handleUpdate}
                   isRefreshing={isRefreshing}
                 />
               ))}

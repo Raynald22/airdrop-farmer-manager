@@ -16,7 +16,11 @@ model User {
   stripeCustomerId String? @unique
   subscriptionId   String? @unique
   subscriptionStatus String? // active, past_due, canceled
+
   currentPeriodEnd DateTime?
+
+  // Notifications
+  telegramChatId String? // For bot alerts
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -38,6 +42,8 @@ model Wallet {
   address   String
   type      WalletType @default(EVM)
   label     String?
+  notes     String?
+  encryptedPrivateKey String? // Encrypted with AES-256 (Whale tier only)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -110,6 +116,9 @@ model Task {
   description String?
   points      Int      @default(0)
   type        String   @default("manual") // manual, onchain_verify
+  url         String?
+
+  content     String? // Markdown guide
   
   walletTasks WalletTask[]
   createdAt   DateTime @default(now())

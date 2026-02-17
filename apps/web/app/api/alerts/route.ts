@@ -1,46 +1,26 @@
 import { NextResponse } from "next/server";
-import { generateAlerts, type Alert } from "@/lib/alerts";
+import { PrismaClient } from "@prisma/client";
+import { auth } from "@clerk/nextjs/server";
 
-/**
- * GET /api/alerts
- * Returns mock alerts for the current user's wallets.
- * In production, this reads from the database and background job results.
- */
+const prisma = new PrismaClient();
+
 export async function GET() {
-    // Mock: In production, fetch alerts from database
-    const mockAlerts: Alert[] = [
-        {
-            id: "alert-demo-1",
-            type: "inactivity",
-            priority: "warning",
-            title: "Wallet Inactive",
-            message: "Wallet 0xd8dA...6045 has been idle for 35 days on zkSync Era.",
-            walletAddress: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-            createdAt: new Date(),
-            read: false,
-        },
-        {
-            id: "alert-demo-2",
-            type: "opportunity",
-            priority: "info",
-            title: "New Farming Opportunity",
-            message: "Scroll has announced a new points campaign. Bridge and interact to qualify.",
-            createdAt: new Date(),
-            read: false,
-            actionUrl: "https://scroll.io",
-        },
-        {
-            id: "alert-demo-3",
-            type: "low_balance",
-            priority: "critical",
-            title: "Low Gas Balance",
-            message: "Wallet 0x5038...23Da has < 0.005 ETH on Base. Top up to continue farming.",
-            walletAddress: "0x503828976D22510aad0201ac7EC88293211D23Da",
-            chainId: 8453,
-            createdAt: new Date(),
-            read: false,
-        },
-    ];
+    const { userId } = await auth();
 
-    return NextResponse.json({ alerts: mockAlerts });
+    if (!userId) {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    try {
+        const alerts = await prisma.alert.findMany({
+            where: { userId },
+            orderBy: { createdAt: "desc" },
+            take: 20, // Limit to recent 20
+        });
+
+        return NextResponse.json({ alerts });
+    } catch (error) {
+        console.error("[ALERTS_GET]", error);
+        return new NextResponse("Internal Error", { status: 500 });
+    }
 }

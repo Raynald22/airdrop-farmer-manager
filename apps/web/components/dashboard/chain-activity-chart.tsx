@@ -20,15 +20,28 @@ ChartJS.defaults.borderColor = "hsl(217, 33%, 17%)";
 
 interface ChainActivityChartProps {
   walletCount: number;
+  stats?: Record<string, number>; // { "Scroll": 120, "Linea": 50 }
 }
 
-export function ChainActivityChart({ walletCount }: ChainActivityChartProps) {
+export function ChainActivityChart({ walletCount, stats }: ChainActivityChartProps) {
+  // Use real stats if provided, otherwise 0
+  const chartData = stats 
+    ? [
+        stats["zkSync"] || 0,
+        stats["Scroll"] || 0,
+        stats["Base"] || 0,
+        stats["Linea"] || 0,
+        stats["Unknown"] || 0, // placeholders
+        0
+      ]
+    : [0, 0, 0, 0, 0, 0];
+
   const data = {
-    labels: ["zkSync Era", "Scroll", "Base", "Linea", "Arbitrum", "Optimism"],
+    labels: ["zkSync Era", "Scroll", "Base", "Linea", "Other", "Upcoming"],
     datasets: [
       {
-        label: "Avg Tx Count",
-        data: walletCount > 0 ? [42, 28, 55, 15, 38, 22] : [0, 0, 0, 0, 0, 0],
+        label: "Total Tx Count",
+        data: chartData,
         backgroundColor: [
           "rgba(139, 141, 252, 0.6)",
           "rgba(255, 190, 152, 0.6)",

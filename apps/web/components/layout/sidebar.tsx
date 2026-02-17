@@ -1,3 +1,5 @@
+"use client";
+
 import {
   LayoutDashboard,
   Wallet,
@@ -11,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { SidebarUpgrade } from "./sidebar-upgrade";
 
 interface NavItem {
   label: string;
@@ -23,10 +26,10 @@ const navItems: NavItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
   { label: "Airdrops", href: "/airdrops", icon: Gift },
   { label: "Wallets", href: "/wallets", icon: Wallet },
-  { label: "Activity", href: "/activity", icon: Activity },
+  { label: "Activity & Alerts", href: "/activity", icon: Activity },
   { label: "Scoring", href: "/scoring", icon: TrendingUp },
   { label: "Sybil Check", href: "/sybil", icon: Shield, badge: "Pro" },
-  { label: "Alerts", href: "/alerts", icon: Bell },
+  // { label: "Alerts", href: "/alerts", icon: Bell }, // Removed: Consolidated into Activity
 ];
 
 const bottomItems: NavItem[] = [
@@ -63,29 +66,29 @@ export function Sidebar() {
           <NavLink key={item.href} item={item} />
         ))}
         {/* Upgrade CTA */}
-        <div className="mt-3 p-3 rounded-lg bg-primary/10 border border-primary/20">
-          <p className="text-xs font-semibold text-primary">Upgrade to Pro</p>
-          <p className="text-[10px] text-muted-foreground mt-1">Track unlimited wallets</p>
-          <button className="mt-2 w-full text-[11px] font-medium bg-primary text-primary-foreground rounded-md py-1.5 hover:bg-primary/90 transition-colors">
-            Upgrade — $29/mo
-          </button>
-        </div>
+        <SidebarUpgrade />
       </div>
     </aside>
   );
 }
 
+import { usePathname } from "next/navigation";
+
 function NavLink({ item }: { item: NavItem }) {
-  // In production, use usePathname() to determine active state
+  const pathname = usePathname();
+  const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+
   return (
     <Link
       href={item.href}
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-        "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+        isActive 
+          ? "bg-primary/10 text-primary font-semibold" 
+          : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
       )}
     >
-      <item.icon className="h-4 w-4" />
+      <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
       <span className="flex-1">{item.label}</span>
       {item.badge && (
         <span className="text-[9px] font-bold uppercase bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">

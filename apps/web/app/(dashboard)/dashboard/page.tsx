@@ -1,13 +1,17 @@
-
 "use client";
 
+import { Plus, Wallet, ShieldCheck, Activity, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { WalletInput } from "@/components/dashboard/wallet-input";
 import { WalletTable } from "@/components/dashboard/wallet-table";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChainActivityChart } from "@/components/dashboard/chain-activity-chart";
 import { useWallets } from "@/hooks/use-wallets";
-
+import { GettingStarted } from "@/components/dashboard/getting-started";
+import { GasTracker } from "@/components/dashboard/gas-tracker";
+import { RecentActivity } from "@/components/dashboard/recent-activity";
 const FREE_TIER_MAX = 5;
 
 export default function DashboardPage() {
@@ -62,22 +66,71 @@ export default function DashboardPage() {
     );
   }
 
+  // Calculate chain stats for chart
+  const chainStats: Record<string, number> = {
+    "zkSync": 0, "Scroll": 0, "Base": 0, "Linea": 0, "Unknown": 0
+  };
+
+  wallets.forEach((w: any) => {
+    if (w.stats) {
+      w.stats.forEach((s: any) => {
+        if (s.chainId === 324) chainStats["zkSync"] += s.txCount;
+        else if (s.chainId === 534352) chainStats["Scroll"] += s.txCount;
+        else if (s.chainId === 8453) chainStats["Base"] += s.txCount;
+        else if (s.chainId === 59144) chainStats["Linea"] += s.txCount;
+        else chainStats["Unknown"] += s.txCount;
+      });
+    }
+  });
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <div className="flex items-center gap-3 mb-1">
+             <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+             <GasTracker />
+          </div>
+          <p className="text-sm text-muted-foreground">
             Track your airdrop farming progress across multiple chains
           </p>
         </div>
-        <WalletInput
-          onAddWallets={handleAddWallets}
-          currentCount={wallets.length}
-          maxCount={FREE_TIER_MAX}
-        />
+        <div className="flex items-center gap-2">
+            <Button variant="outline" asChild>
+                <a href="/api/wallets/export" download>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </a>
+            </Button>
+            <Button 
+                variant="default" 
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                onClick={async () => {
+                    const toastId = toast.loading("🤖 Bot is starting...");
+                    try {
+                        const res = await fetch("/api/farm", { method: "POST" });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || "Failed");
+                        toast.success(`Bot finished! Processed ${data.results?.length} wallets.`, { id: toastId });
+                    } catch (e: any) {
+                        toast.error(`Bot failed: ${e.message}`, { id: toastId });
+                    }
+                }}
+            >
+                <Activity className="mr-2 h-4 w-4" />
+                Run Bot
+            </Button>
+            <WalletInput
+              onAddWallets={handleAddWallets}
+              currentCount={wallets.length}
+              maxCount={FREE_TIER_MAX}
+            />
+        </div>
       </div>
+
+      {/* Getting Started Guide */}
+      <GettingStarted />
 
       {/* Stats */}
       <StatsCards
@@ -89,19 +142,20 @@ export default function DashboardPage() {
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Wallet Table — takes 2 cols */}
-        <div className="lg:col-span-2">
+        {/* Main Column (Table + Chart) */}
+        <div className="lg:col-span-2 space-y-6">
           <WalletTable 
             wallets={wallets} 
             onRemoveWallet={handleRemoveWallet} 
             onRefreshWallet={refreshWallet}
             isRefreshing={isRefreshing}
           />
+          <ChainActivityChart walletCount={wallets.length} stats={chainStats} />
         </div>
 
-        {/* Chart — takes 1 col */}
-        <div>
-          <ChainActivityChart walletCount={wallets.length} />
+        {/* Sidebar (Activity Feed) */}
+        <div className="lg:col-span-1">
+          <RecentActivity />
         </div>
       </div>
     </div>

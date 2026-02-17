@@ -4,6 +4,7 @@
 import { useEffect, useState, use } from "react";
 import { useWallets } from "@/hooks/use-wallets";
 import { TaskList } from "@/components/airdrop/task-list";
+import { BulkTaskUpdateDialog } from "@/components/airdrop/bulk-task-update-dialog";
 import {
   Select,
   SelectContent,
@@ -133,6 +134,25 @@ export default function AirdropDetailPage({ params }: { params: Promise<{ id: st
                 </SelectContent>
              </Select>
           </div>
+
+          
+           {/* Bulk Actions */}
+           <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block invisible">
+                 Action
+              </label>
+              <BulkTaskUpdateDialog 
+                tasks={airdrop.tasks} 
+                wallets={wallets} 
+                onSuccess={() => {
+                   // Optional: refresh current wallet view if selected
+                   if (selectedWalletId) {
+                      // Trigger re-fetch logic if needed, or rely on optimistic UI in future updates
+                      // For now, simple toast in dialog is enough feedback
+                   }
+                }}
+              />
+           </div>
         </div>
       </div>
 

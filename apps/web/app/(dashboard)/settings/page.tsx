@@ -1,25 +1,26 @@
 
-"use client";
-
-import { useUser } from "@clerk/nextjs";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { SubscriptionStatus } from "@/components/settings/subscription-status";
+import { NotificationSettings } from "@/components/settings/notifications";
 
-export default function SettingsPage() {
-  const { user, isLoaded } = useUser();
-
-  if (!isLoaded) {
-    return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-1/4" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+export default async function SettingsPage() {
+  const user = await currentUser();
+  
+  if (!user) {
+    redirect("/sign-in");
   }
+
+  // Fetch db user for telegramChatId
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { telegramChatId: true }
+  });
 
   return (
     <div className="space-y-6">
@@ -41,7 +42,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
-              {user?.imageUrl && (
+              {user.imageUrl && (
                 <img 
                   src={user.imageUrl} 
                   alt="Profile" 
@@ -49,19 +50,22 @@ export default function SettingsPage() {
                 />
               )}
               <div>
-                <p className="font-medium">{user?.fullName || "User"}</p>
+                <p className="font-medium">{user.fullName || "User"}</p>
                 <p className="text-sm text-muted-foreground">
-                  {user?.primaryEmailAddress?.emailAddress}
+                  {user.emailAddresses[0]?.emailAddress}
                 </p>
               </div>
             </div>
             
             <div className="grid gap-2">
               <Label>User ID</Label>
-              <Input value={user?.id || ""} readOnly className="bg-muted font-mono" />
+              <Input value={user.id} readOnly className="bg-muted font-mono" />
             </div>
           </CardContent>
         </Card>
+
+        {/* Notifications */}
+        <NotificationSettings initialChatId={dbUser?.telegramChatId || ""} />
 
         {/* Subscription Plan */}
         <Card>
@@ -72,18 +76,7 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg bg-card">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold">Current Plan</span>
-                  <Badge variant="secondary">Free Tier</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Limited to 5 wallets. Upgrade to unlock unlimited tracking.
-                </p>
-              </div>
-              <Button>Upgrade to Pro</Button>
-            </div>
+            <SubscriptionStatus />
           </CardContent>
         </Card>
 

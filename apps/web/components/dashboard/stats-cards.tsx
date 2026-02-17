@@ -1,6 +1,7 @@
 import { Wallet, Activity, TrendingUp, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface StatCardProps {
   title: string;
@@ -77,7 +78,16 @@ export function StatsCards({ totalWallets, totalBalance, activeWallets, warningC
         value={warningCount}
         change={warningCount > 0 ? "Action required" : "All clear"}
         changeType={warningCount > 0 ? "negative" : "positive"}
-        icon={<AlertTriangle className="h-5 w-5" />}
+        icon={
+            <Tooltip>
+                <TooltipTrigger>
+                    <AlertTriangle className="h-5 w-5 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent>
+                    Wallets with Sybil risk factors. Check database for details.
+                </TooltipContent>
+            </Tooltip>
+        }
       />
     </div>
   );

@@ -1,8 +1,10 @@
+
 import { ConnectButton } from "@rainbow-me/rainbowkit";
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { Notifications } from "./notifications";
 
 export function Header() {
   return (
@@ -20,10 +22,11 @@ export function Header() {
       <div className="flex items-center gap-3">
         <SignedIn>
           {/* Notifications */}
-          <button className="relative p-2 rounded-lg hover:bg-accent/50 transition-colors">
-            <Bell className="h-4 w-4 text-muted-foreground" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary animate-pulse" />
-          </button>
+          <Notifications />
+
+          <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
+                <a href="/pricing">Upgrade</a>
+          </Button>
 
           {/* Connect Wallet */}
           <ConnectButton

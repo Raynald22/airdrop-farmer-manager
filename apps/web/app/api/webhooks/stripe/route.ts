@@ -1,3 +1,4 @@
+
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
@@ -33,6 +34,17 @@ export async function POST(req: Request) {
                 return new NextResponse("User id is required", { status: 400 });
             }
 
+            // Map Price ID to Tier
+            // Default to 'pro' if unknown, but check specific IDs
+            const priceId = subscription.items.data[0].price.id;
+            let tier = "pro"; // Default fallback
+
+            if (priceId === "price_1T1sYzDuwsWR5LkOoqKiEJ4y") {
+                tier = "whale";
+            } else if (priceId === "price_1T1sYDDuwsWR5LkOUwmX3c79") {
+                tier = "pro";
+            }
+
             await prisma.user.update({
                 where: {
                     id: session.metadata.userId,
@@ -44,7 +56,7 @@ export async function POST(req: Request) {
                     currentPeriodEnd: new Date(
                         (subscription as any).current_period_end * 1000
                     ),
-                    tier: "pro", // Simplified: needs logic for free/pro based on priceId
+                    tier: tier,
                 },
             });
         }
