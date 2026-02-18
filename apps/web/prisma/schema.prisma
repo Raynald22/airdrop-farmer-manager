@@ -27,6 +27,7 @@ model User {
   wallets   Wallet[]
   groups    WalletGroup[]
   alerts    Alert[]
+  settings  Json?    // { maxGwei: number, minBalance: string, tradingEnabled: boolean }
 }
 
 enum WalletType {
@@ -43,6 +44,7 @@ model Wallet {
   type      WalletType @default(EVM)
   label     String?
   notes     String?
+  proxy     String?  // Format: "http://user:pass@host:port"
   encryptedPrivateKey String? // Encrypted with AES-256 (Whale tier only)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

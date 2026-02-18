@@ -14,6 +14,7 @@ interface AirdropProps {
     description: string | null;
     chain: string | null;
     status: string;
+    slug: string;
     tasks: { id: string }[];
   };
 }
@@ -38,7 +39,7 @@ export function AirdropCard({ airdrop }: AirdropProps) {
             <span>{airdrop.tasks.length} Tasks</span>
           </div>
         </div>
-        <Link href={`/airdrops/${airdrop.id}`}>
+        <Link href={`/airdrops/${airdrop.slug}`}>
           <Button className="w-full group">
             Start Farming
             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />

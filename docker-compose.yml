@@ -1,38 +1,35 @@
 
-version: '3.8'
+version: '3.9'
 
 services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/web/Dockerfile
+    container_name: airdrop-farmer
+    restart: always
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/airdrop_farmer
-      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/airdrop?schema=public
       - NODE_ENV=production
+      - CRON_SECRET=${CRON_SECRET} 
+      # Add other env vars here (CLERK_SECRET_KEY, etc.)
     depends_on:
-      - db
-      - redis
+      - postgres
 
-  db:
+  postgres:
     image: postgres:15-alpine
+    container_name: airdrop-db
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: airdrop_farmer
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: airdrop
     volumes:
       - db-data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:alpine
-    restart: always
     ports:
-      - "6379:6379"
+      - "5432:5432"
 
 volumes:
   db-data:

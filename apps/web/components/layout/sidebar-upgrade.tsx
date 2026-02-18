@@ -31,7 +31,7 @@ export function SidebarUpgrade() {
             <p className="text-[10px] text-muted-foreground mt-1">
                 {tier === "pro" ? "Unlock Auto-Farming" : "Track unlimited wallets"}
             </p>
-            <Link href="/pricing">
+            <Link href="/subscription">
                 <button className="mt-2 w-full text-[11px] font-medium bg-primary text-primary-foreground rounded-md py-1.5 hover:bg-primary/90 transition-colors">
                     Upgrade Now
                 </button>

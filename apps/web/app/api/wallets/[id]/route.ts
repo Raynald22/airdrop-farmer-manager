@@ -25,13 +25,17 @@ export async function PATCH(
             return new NextResponse("Not found or unauthorized", { status: 404 });
         }
 
-        // Update fields (whitelist only)
+        // Update fields
         const updatedWallet = await prisma.wallet.update({
             where: { id },
             data: {
                 notes: body.notes !== undefined ? body.notes : undefined,
                 label: body.label !== undefined ? body.label : undefined,
+                groups: body.groups !== undefined ? {
+                    set: body.groups.map((groupId: string) => ({ id: groupId })),
+                } : undefined,
             },
+            include: { groups: true },
         });
 
         return NextResponse.json(updatedWallet);

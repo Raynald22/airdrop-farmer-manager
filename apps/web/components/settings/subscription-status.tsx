@@ -62,7 +62,7 @@ export function SubscriptionStatus() {
       </div>
       {!isWhale && (
         <Button asChild variant="default">
-          <Link href="/pricing">
+          <Link href="/subscription">
              {isPro ? "Upgrade to Whale" : "Upgrade to Pro"}
           </Link>
         </Button>

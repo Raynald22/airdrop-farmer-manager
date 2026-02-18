@@ -18,13 +18,33 @@ const BTC_REGEX = /^(1|3|bc1)[a-zA-Z0-9]{25,59}$/;
 const formSchema = z.object({
   addresses: z.string().min(1, "Paste at least one address"),
   label: z.string().optional(),
+  proxy: z.string().optional(),
 });
 
 interface WalletInputProps {
-  onAddWallets: (wallets: { address: string; label?: string; type: "EVM" | "SOL" | "BTC" }[]) => void;
+  onAddWallets: (wallets: { address: string; label?: string; proxy?: string; type: "EVM" | "SOL" | "BTC" }[]) => void;
   currentCount: number;
   maxCount: number;
 }
+// ... (inside component)
+        const walletsToAdd = validWallets.map((w) => ({
+            address: w.address,
+            type: w.type,
+            label: values.label || undefined,
+            proxy: values.proxy || undefined,
+        }));
+// ... (inside JSX form)
+          <Input
+            placeholder="Label (optional, e.g. 'Main Wallets')"
+            className="h-8 text-sm bg-muted/30 border-border/50"
+            {...form.register("label")}
+          />
+          <Input
+            placeholder="Proxy (optional, http://user:pass@host:port)"
+            className="h-8 text-sm bg-muted/30 border-border/50 font-mono"
+            {...form.register("proxy")}
+          />
+          <Textarea
 
 export function WalletInput({ onAddWallets, currentCount, maxCount }: WalletInputProps) {
   const [isOpen, setIsOpen] = useState(false);

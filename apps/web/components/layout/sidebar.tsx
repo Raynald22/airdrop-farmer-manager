@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SidebarUpgrade } from "./sidebar-upgrade";
+import { BotSettingsDialog } from "../settings/bot-settings-dialog";
 
 interface NavItem {
   label: string;
@@ -62,9 +63,7 @@ export function Sidebar() {
 
       {/* Bottom */}
       <div className="px-3 py-4 border-t border-border/50 space-y-1">
-        {bottomItems.map((item) => (
-          <NavLink key={item.href} item={item} />
-        ))}
+        <BotSettingsDialog />
         {/* Upgrade CTA */}
         <SidebarUpgrade />
       </div>

@@ -25,7 +25,7 @@ export function Header() {
           <Notifications />
 
           <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
-                <a href="/pricing">Upgrade</a>
+                <a href="/subscription">Upgrade</a>
           </Button>
 
           {/* Connect Wallet */}

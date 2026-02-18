@@ -9,10 +9,12 @@ interface GasData {
   gwei: number;
 }
 
+
 const CHAINS = [
-  { name: "ETH", rpc: "https://eth.llama.rpc.com" },
+  { name: "ETH", rpc: "https://rpc.ankr.com/eth" },
   { name: "Scroll", rpc: "https://rpc.scroll.io" },
   { name: "Linea", rpc: "https://rpc.linea.build" },
+  { name: "Base", rpc: "https://mainnet.base.org" },
 ];
 
 export function GasTracker() {
@@ -36,15 +38,22 @@ export function GasTracker() {
               }),
             });
             const data = await res.json();
-            const wei = parseInt(data.result, 16);
-            const gwei = Math.round((wei / 1e9) * 10) / 10; // 1 decimal place
-            return { chain: chain.name, gwei };
+            
+            if (!data.result) {
+               console.warn(`No gas result for ${chain.name}`, data);
+               return { chain: chain.name, gwei: 0 };
+            }
+
+            const wei = parseInt(data.result as string, 16);
+            const gwei = Math.round((wei / 1e9) * 10) / 10; 
+            return { chain: chain.nameName || chain.name, gwei };
           } catch (e) {
             console.error(`Failed to fetch gas for ${chain.name}`, e);
             return { chain: chain.name, gwei: 0 };
           }
         })
       );
+      // Filter out failures if desired, or show 0
       setGasPrices(results);
     } catch (error) {
       console.error("Gas fetch error", error);
@@ -58,6 +67,7 @@ export function GasTracker() {
     const interval = setInterval(fetchGas, 30000); // Poll every 30s
     return () => clearInterval(interval);
   }, []);
+
 
   return (
     <div className="flex items-center gap-4 text-sm border px-3 py-1.5 rounded-full bg-background/50 backdrop-blur shadow-sm">

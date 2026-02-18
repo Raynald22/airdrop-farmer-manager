@@ -1,5 +1,6 @@
 "use client";
 
+
 import { Plus, Wallet, ShieldCheck, Activity, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
@@ -9,13 +10,15 @@ import { WalletTable } from "@/components/dashboard/wallet-table";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { ChainActivityChart } from "@/components/dashboard/chain-activity-chart";
 import { useWallets } from "@/hooks/use-wallets";
+import { useGroups } from "@/hooks/use-groups";
 import { GettingStarted } from "@/components/dashboard/getting-started";
 import { GasTracker } from "@/components/dashboard/gas-tracker";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 const FREE_TIER_MAX = 5;
 
 export default function DashboardPage() {
-  const { wallets, isLoading, addWallet, deleteWallet, refreshWallet, isRefreshing } = useWallets();
+  const { wallets, isLoading, addWallet, deleteWallet, refreshWallet, isRefreshing, mutate: mutateWallets } = useWallets();
+  const { groups, refreshGroups } = useGroups();
   const [sybilRiskCount, setSybilRiskCount] = useState(0);
 
   // Fetch Sybil stats
@@ -45,6 +48,11 @@ export default function DashboardPage() {
 
   const handleRemoveWallet = (id: string) => {
     deleteWallet(id);
+  };
+
+  const handleDataUpdate = () => {
+      mutateWallets();
+      refreshGroups();
   };
 
   // Calculate stats
@@ -146,8 +154,10 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           <WalletTable 
             wallets={wallets} 
+            allGroups={groups}
             onRemoveWallet={handleRemoveWallet} 
             onRefreshWallet={refreshWallet}
+            onUpdate={handleDataUpdate}
             isRefreshing={isRefreshing}
           />
           <ChainActivityChart walletCount={wallets.length} stats={chainStats} />

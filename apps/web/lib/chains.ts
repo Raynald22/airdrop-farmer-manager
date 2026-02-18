@@ -1,4 +1,5 @@
-import { mainnet, zkSync, scroll, base, linea, optimism, arbitrum } from "wagmi/chains";
+
+import { mainnet, zkSync, scroll, base, linea, optimism, arbitrum, baseSepolia, scrollSepolia, lineaSepolia } from "wagmi/chains";
 
 export interface ChainConfig {
     id: number;
@@ -8,9 +9,10 @@ export interface ChainConfig {
     color: string;
     explorerUrl: string;
     explorerApiUrl?: string;
+    isTestnet?: boolean;
 }
 
-export const SUPPORTED_CHAINS: ChainConfig[] = [
+const PRODUCTION_CHAINS: ChainConfig[] = [
     {
         id: mainnet.id,
         name: "Ethereum",
@@ -76,13 +78,56 @@ export const SUPPORTED_CHAINS: ChainConfig[] = [
     },
 ];
 
+const TESTNET_CHAINS: ChainConfig[] = [
+    {
+        id: baseSepolia.id,
+        name: "Base Sepolia",
+        shortName: "Base Sep",
+        icon: "🔵",
+        color: "#0052FF",
+        explorerUrl: "https://sepolia.basescan.org",
+        explorerApiUrl: "https://api-sepolia.basescan.org/api",
+        isTestnet: true,
+    },
+    {
+        id: scrollSepolia.id,
+        name: "Scroll Sepolia",
+        shortName: "Scr Sep",
+        icon: "📜",
+        color: "#FFBE98",
+        explorerUrl: "https://sepolia.scrollscan.com",
+        explorerApiUrl: "https://api-sepolia.scrollscan.com/api",
+        isTestnet: true,
+    },
+    {
+        id: lineaSepolia.id,
+        name: "Linea Sepolia",
+        shortName: "Lin Sep",
+        icon: "▬",
+        color: "#61DFFF",
+        explorerUrl: "https://sepolia.lineascan.build",
+        explorerApiUrl: "https://api-sepolia.lineascan.build/api",
+        isTestnet: true,
+    },
+];
+
+// In Development, include Testnets.
+export const SUPPORTED_CHAINS: ChainConfig[] =
+    process.env.NODE_ENV === "development"
+        ? [...PRODUCTION_CHAINS, ...TESTNET_CHAINS]
+        : PRODUCTION_CHAINS;
+
 export function getChainById(chainId: number): ChainConfig | undefined {
     return SUPPORTED_CHAINS.find((c) => c.id === chainId);
 }
 
 export function getDefaultTrackingChains(): ChainConfig[] {
     // Default chains relevant for airdrop farming
-    return SUPPORTED_CHAINS.filter((c) =>
-        ([zkSync.id, scroll.id, base.id, linea.id] as number[]).includes(c.id)
-    );
+    // If dev, include testnets for visibility
+    const defaults: number[] = [zkSync.id, scroll.id, base.id, linea.id];
+    if (process.env.NODE_ENV === "development") {
+        defaults.push(baseSepolia.id, scrollSepolia.id, lineaSepolia.id);
+    }
+
+    return SUPPORTED_CHAINS.filter((c) => defaults.includes(c.id));
 }

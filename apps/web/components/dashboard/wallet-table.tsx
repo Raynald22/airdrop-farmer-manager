@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -20,22 +21,34 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StickyNote, Save } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
+import { WalletGroupSelect } from "@/components/wallets/wallet-group-select";
+import { GroupFilter } from "@/components/wallets/group-filter";
+import { GroupManager } from "@/components/wallets/group-manager";
+
+interface Group {
+    id: string;
+    name: string;
+}
 
 interface TrackedWallet {
   id: string;
   address: string;
   label?: string;
   notes?: string | null;
+  groups?: Group[];
+  stats?: any[]; // Using any to avoid importing WalletStat for now, or could import it
   createdAt: Date;
   updatedAt: Date;
 }
 
 interface WalletTableProps {
   wallets: TrackedWallet[];
+  allGroups?: Group[]; // Should come from parent now if possible, or we fetch
   onRemoveWallet: (id: string) => void;
   onRefreshWallet: (id: string) => void;
+  onUpdate?: () => void; // Trigger parent refresh
   isRefreshing?: boolean;
 }
 
@@ -126,8 +139,9 @@ function WalletNotes({ wallet, onUpdate }: { wallet: TrackedWallet; onUpdate: ()
   );
 }
 
-function WalletRow({ wallet, onRemove, onRefresh, onUpdate, isRefreshing }: { 
+function WalletRow({ wallet, allGroups, onRemove, onRefresh, onUpdate, isRefreshing }: { 
   wallet: TrackedWallet; 
+  allGroups: Group[];
   onRemove: (id: string) => void;
   onRefresh: (id: string) => void;
   onUpdate: (id: string) => void;
@@ -135,22 +149,7 @@ function WalletRow({ wallet, onRemove, onRefresh, onUpdate, isRefreshing }: {
 }) {
   const addr = wallet.address as `0x${string}`;
 
-  // Mock scoring for demo
-  const mockStats = {
-    id: "mock",
-    walletId: wallet.id,
-    chainId: 1,
-    txCount: Math.floor(Math.random() * 100),
-    volumeUsd: Math.floor(Math.random() * 10000),
-    balance: Math.random() * 2,
-    fetchedAt: new Date()
-  };
-
-  // We cast to any because we are mocking the input
-  const mockScore = calculateWalletScore({ 
-      ...wallet, 
-      stats: [mockStats] 
-  } as any);
+  const score = calculateWalletScore(wallet as any); // Casting as any to match specific Prisma types used in scoring.ts
 
   const copyAddress = () => {
     navigator.clipboard.writeText(wallet.address);
@@ -179,14 +178,24 @@ function WalletRow({ wallet, onRemove, onRefresh, onUpdate, isRefreshing }: {
         </div>
       </TableCell>
       
-      {/* Notes (New Column) */}
+      {/* Groups (New Column) */}
+      <TableCell className="w-[180px]">
+         <WalletGroupSelect 
+            walletId={wallet.id} 
+            assignedGroups={wallet.groups || []} 
+            allGroups={allGroups}
+            onUpdate={() => onUpdate(wallet.id)}
+         />
+      </TableCell>
+
+      {/* Notes */}
       <TableCell>
         <WalletNotes wallet={wallet} onUpdate={() => onUpdate(wallet.id)} />
       </TableCell>
 
       {/* Score */}
       <TableCell>
-        <ScoreBadge score={mockScore} />
+        <ScoreBadge score={score} />
       </TableCell>
 
       {/* Chain Balances */}
@@ -225,17 +234,17 @@ function WalletRow({ wallet, onRemove, onRefresh, onUpdate, isRefreshing }: {
   );
 }
 
-export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefreshing }: WalletTableProps) {
-  // Simple hack to refresh: In a real app, use SWR/Tanstack Query mutation
-  // Here we just rely on parent re-fetching or optimistic updates. 
-  // For now, we pass a dummy update handler that refreshes the whole list via parent if possible,
-  // or just assumes optimistic update at row level (though refreshing is better).
-  // Actually, let's just use the refreshWallet function to trigger a re-fetch of that specific wallet if possible,
-  // or we need a way to tell parent to reload.
-  // For MVP, we'll reuse onRefreshWallet which triggers useWallets refresh logic.
-  
+export function WalletTable({ wallets, allGroups = [], onRemoveWallet, onRefreshWallet, onUpdate, isRefreshing }: WalletTableProps) {
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+
+  const filteredWallets = useMemo(() => {
+    if (!selectedGroupId) return wallets;
+    return wallets.filter(w => w.groups?.some(g => g.id === selectedGroupId));
+  }, [wallets, selectedGroupId]);
+
   const handleUpdate = (id: string) => {
       onRefreshWallet(id); 
+      onUpdate?.();
   };
 
   if (wallets.length === 0) {
@@ -256,13 +265,27 @@ export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefres
 
   return (
     <Card className="glass border-border/30">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Tracked Wallets ({wallets.length})</CardTitle>
-          <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
-            Free: {wallets.length}/5
-          </Badge>
-        </div>
+      <CardHeader className="pb-3 block">
+         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+             <div>
+                <CardTitle className="text-base">Tracked Wallets ({filteredWallets.length})</CardTitle>
+                <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                        Total: {wallets.length}
+                    </Badge>
+                </div>
+            </div>
+            
+            <div className="flex items-center gap-2 max-w-full overflow-hidden">
+                <GroupFilter 
+                    groups={allGroups} 
+                    selectedGroupId={selectedGroupId} 
+                    onSelect={setSelectedGroupId} 
+                />
+                <div className="h-6 w-px bg-border/50 mx-1 shrink-0" />
+                <GroupManager groups={allGroups} onUpdate={() => onUpdate?.()} />
+            </div>
+         </div>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -270,7 +293,8 @@ export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefres
             <TableHeader>
               <TableRow className="hover:bg-transparent border-border/30">
                 <TableHead className="text-xs w-[200px]">Wallet</TableHead>
-                <TableHead className="text-xs w-[150px]">Notes</TableHead>
+                <TableHead className="text-xs w-[200px]">Groups</TableHead>
+                <TableHead className="text-xs w-[100px]">Notes</TableHead>
                 <TableHead className="text-xs">
                   <Tooltip>
                     <TooltipTrigger className="flex items-center gap-1 cursor-help">
@@ -295,16 +319,24 @@ export function WalletTable({ wallets, onRemoveWallet, onRefreshWallet, isRefres
               </TableRow>
             </TableHeader>
             <TableBody>
-              {wallets.map((wallet) => (
+              {filteredWallets.map((wallet) => (
                 <WalletRow 
                   key={wallet.id} 
                   wallet={wallet} 
+                  allGroups={allGroups}
                   onRemove={onRemoveWallet} 
                   onRefresh={onRefreshWallet}
                   onUpdate={handleUpdate}
                   isRefreshing={isRefreshing}
                 />
               ))}
+              {filteredWallets.length === 0 && (
+                  <TableRow>
+                      <TableCell colSpan={9} className="h-24 text-center text-sm text-muted-foreground">
+                          No wallets found in this group.
+                      </TableCell>
+                  </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>

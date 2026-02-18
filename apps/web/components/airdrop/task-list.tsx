@@ -1,16 +1,13 @@
 
 "use client";
 
-import Link from "next/link";
-
-import { useState, useEffect } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, Circle, RefreshCw } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, Circle, PlayCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { TaskDetailDialog } from "./task-detail-dialog";
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
 
 interface Task {
   id: string;
@@ -18,213 +15,93 @@ interface Task {
   description: string | null;
   points: number;
   type: string;
-  url?: string;
+  url: string | null;
+  content: string | null;
 }
 
 interface TaskListProps {
   tasks: Task[];
-  walletId: string | null;
+  airdropId: string;
 }
 
-export function TaskList({ tasks, walletId }: TaskListProps) {
-  const [taskStatuses, setTaskStatuses] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
-  const [toggling, setToggling] = useState<string | null>(null);
-  const [verifying, setVerifying] = useState<string | null>(null);
+export function TaskList({ tasks, airdropId }: TaskListProps) {
+  const { user } = useUser();
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  
+  // In a real app, fetch this from API/DB
+  // For now, use local state or localStorage mock
+  const [completedTaskIds, setCompletedTaskIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (!walletId) {
-      setTaskStatuses({});
-      return;
-    }
-
-    async function fetchTaskStatuses() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/wallets/${walletId}/tasks`);
-        if (res.ok) {
-          const data = await res.json();
-          setTaskStatuses(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch task statuses", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTaskStatuses();
-  }, [walletId]);
-
-  const handleToggle = async (taskId: string, currentStatus: string) => {
-    if (!walletId || toggling || verifying) return;
-
-    const newStatus = currentStatus === "completed" ? "pending" : "completed";
-    setToggling(taskId);
-
-    // Optimistic update
-    setTaskStatuses((prev) => ({
-      ...prev,
-      [taskId]: newStatus,
-    }));
-
-    try {
-      await fetch(`/api/wallets/${walletId}/tasks`, {
-        method: "POST",
-        body: JSON.stringify({ taskId, status: newStatus }),
-      });
-    } catch (error) {
-      console.error("Failed to update task", error);
-      // Revert on error
-      setTaskStatuses((prev) => ({
-        ...prev,
-        [taskId]: currentStatus,
-      }));
-    } finally {
-      setToggling(null);
-    }
-  };
-
-  const handleVerify = async (e: React.MouseEvent, taskId: string) => {
-    e.stopPropagation();
-    if (!walletId || verifying || toggling) return;
+  // Function to mark verify logic
+  const handleComplete = async (taskId: string) => {
+    // 1. Optimistic Update
+    const newcompleted = new Set(completedTaskIds);
+    newcompleted.add(taskId);
+    setCompletedTaskIds(newcompleted);
     
-    setVerifying(taskId);
-    try {
-        const res = await fetch(`/api/tasks/${taskId}/verify`, {
-            method: "POST",
-            body: JSON.stringify({ walletId }),
-        });
-        
-        const data = await res.json();
-        
-        if (data.verified) {
-            setTaskStatuses((prev) => ({
-                ...prev,
-                [taskId]: "completed",
-            }));
-            toast.success("Verification successful! Task completed.");
-        } else {
-            toast.error("Verification failed. Check if you completed the task on-chain.");
-        }
-    } catch (error) {
-        console.error("Verification error", error);
-        toast.error("Something went wrong during verification.");
-    } finally {
-        setVerifying(null);
-    }
+    // 2. API Call (TODO: Implement POST /api/tasks/[id]/verify)
+    // try {
+    //     await fetch(`/api/tasks/${taskId}/verify`, { method: "POST" });
+    //     toast.success("Task verified!");
+    // } catch (e) {
+    //     toast.error("Failed to verify");
+    //     // rollback local state
+    // }
+    
+    toast.success("Task marked complete!");
+    setSelectedTask(null);
   };
-
-  if (!walletId) {
-    return (
-      <div className="text-center py-12 border rounded-lg bg-muted/10">
-        <p className="text-muted-foreground">Select a wallet to track progress</p>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
-    <div className="grid gap-4">
+    <div className="space-y-4">
       {tasks.map((task) => {
-        const isCompleted = taskStatuses[task.id] === "completed";
-        const isProcessing = toggling === task.id;
-        const isVerifying = verifying === task.id;
-
+        const isCompleted = completedTaskIds.has(task.id);
+        
         return (
-          <div
-            key={task.id}
+          <Card 
+            key={task.id} 
             className={cn(
-              "flex items-start gap-4 p-4 rounded-lg border transition-all cursor-pointer hover:border-primary/50",
-              isCompleted ? "bg-primary/5 border-primary/20" : "bg-card"
+                "transition-all cursor-pointer hover:border-primary/50 group",
+                isCompleted ? "bg-muted/30 border-green-500/20" : "bg-card"
             )}
-            onClick={() => handleToggle(task.id, taskStatuses[task.id] || "pending")}
+            onClick={() => setSelectedTask(task)}
           >
-            <div className="mt-1">
-              {isProcessing ? (
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              ) : (
-                <div
-                  className={cn(
-                    "h-5 w-5 rounded-full border flex items-center justify-center transition-colors",
-                    isCompleted
-                      ? "bg-primary border-primary text-primary-foreground"
-                      : "border-muted-foreground/30 hover:border-primary"
-                  )}
-                >
-                  {isCompleted && <CheckCircle2 className="h-3.5 w-3.5" />}
+            <CardContent className="p-4 flex items-center gap-4">
+                <div className={cn(
+                    "h-8 w-8 rounded-full flex items-center justify-center shrink-0 transition-colors",
+                    isCompleted ? "bg-green-500/10 text-green-500" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground"
+                )}>
+                    {isCompleted ? <CheckCircle className="h-5 w-5" /> : <PlayCircle className="h-5 w-5" />}
                 </div>
-              )}
-            </div>
+                
+                <div className="flex-1">
+                    <h4 className={cn("font-medium", isCompleted && "text-muted-foreground line-through")}>
+                        {task.title}
+                    </h4>
+                    {task.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                            {task.description}
+                        </p>
+                    )}
+                </div>
 
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "font-medium",
-                    isCompleted && "text-muted-foreground line-through decoration-primary/50"
-                  )}
-                >
-                  <Link href={`/tasks/${task.id}`} className="hover:underline hover:text-primary transition-colors">
-                    {task.title}
-                  </Link>
-                </span>
-                <div className="flex items-center gap-2">
-                  <Badge variant={isCompleted ? "default" : "outline"} className="ml-2">
-                    {task.points} PTS
-                  </Badge>
-                   {task.url && (
-                    <a
-                      href={task.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground px-2 py-1 rounded-md flex items-center gap-1 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      Go ↗
-                    </a>
-                  )}
+                <div className="text-sm font-semibold text-muted-foreground group-hover:text-foreground">
+                    +{task.points} PTS
                 </div>
-              </div>
-              <p className="text-sm text-muted-foreground">{task.description}</p>
-              
-              {/* Verification UI */}
-              {task.type === "onchain_verify" && !isCompleted && (
-                <div className="mt-3 flex items-center gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="default" 
-                    className="h-7 text-xs gap-1"
-                    onClick={(e) => handleVerify(e, task.id)}
-                    disabled={isVerifying}
-                  >
-                     {isVerifying ? <Loader2 className="h-3 w-3 animate-spin"/> : <RefreshCw className="h-3 w-3" />}
-                     {isVerifying ? "Verifying..." : "Verify On-Chain"}
-                  </Button>
-                  <span className="text-[10px] text-muted-foreground">
-                    Checks blockchain automatically
-                  </span>
-                </div>
-              )}
-              
-              {task.type === "onchain_verify" && isCompleted && (
-                <div className="mt-2">
-                   <Badge variant="secondary" className="text-[10px] uppercase bg-green-100 text-green-800 border-green-200">
-                     Verified On-Chain
-                   </Badge>
-                </div>
-              )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         );
       })}
+
+      {selectedTask && (
+        <TaskDetailDialog 
+            task={selectedTask}
+            isOpen={!!selectedTask}
+            onOpenChange={(open) => !open && setSelectedTask(null)}
+            onComplete={handleComplete}
+            isCompleted={completedTaskIds.has(selectedTask.id)}
+        />
+      )}
     </div>
   );
 }

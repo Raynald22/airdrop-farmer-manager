@@ -53,12 +53,38 @@ export async function POST(req: Request) {
             },
         });
 
+
         return NextResponse.json(group);
     } catch (error) {
         console.error("[GROUPS_POST]", error);
         if (error instanceof z.ZodError) {
             return new NextResponse("Invalid data", { status: 400 });
         }
+        return new NextResponse("Internal Error", { status: 500 });
+    }
+}
+
+export async function DELETE(req: Request) {
+    const { userId } = await auth();
+    if (!userId) {
+        return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+
+        if (!id) {
+            return new NextResponse("Missing ID", { status: 400 });
+        }
+
+        const group = await prisma.walletGroup.delete({
+            where: { id, userId },
+        });
+
+        return NextResponse.json(group);
+    } catch (error) {
+        console.error("[GROUPS_DELETE]", error);
         return new NextResponse("Internal Error", { status: 500 });
     }
 }
